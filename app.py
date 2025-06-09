@@ -1,0 +1,75 @@
+# app.py
+import sys
+from PyQt6.QtWidgets import QApplication, QMainWindow, QTabWidget, QMessageBox, QFileDialog
+import pandas as pd
+from fpdf import FPDF
+from docx import Document
+
+from database       import Database
+from dashboard_tab  import DashboardTab
+from items_tab      import ItemsTab
+from atajados_tab   import AtajadosTab
+from avance_tab     import AvanceTab
+from cronograma_tab import CronogramaTab
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.db = Database()
+        self.setWindowTitle("Supervisión de Atajados")
+        self.resize(1200,800)
+
+        tabs = QTabWidget()
+        tabs.addTab(DashboardTab(self.db), "Inicio")
+        tabs.addTab(ItemsTab(self.db),     "Ítems")
+        tabs.addTab(AtajadosTab(self.db),"Atajados")
+        tabs.addTab(AvanceTab(self.db),    "Seguimiento")
+        tabs.addTab(CronogramaTab(self.db),"Cronograma")
+        self.setCentralWidget(tabs)
+
+        m = self.menuBar().addMenu("Exportar")
+        xlsx = m.addAction("A Excel"); xlsx.triggered.connect(self.to_excel)
+        pdf  = m.addAction("A PDF");   pdf.triggered.connect(self.to_pdf)
+        docx = m.addAction("A Word");  docx.triggered.connect(self.to_word)
+
+    def to_excel(self):
+        df1 = pd.read_sql("SELECT * FROM items",    self.db.conn)
+        df2 = pd.read_sql("SELECT * FROM atajados", self.db.conn)
+        path,_ = QFileDialog.getSaveFileName(self,"Guardar","","*.xlsx")
+        if path:
+            with pd.ExcelWriter(path) as w:
+                df1.to_excel(w,"Ítems",index=False)
+                df2.to_excel(w,"Atajados",index=False)
+            QMessageBox.information(self,"✔","Excel generado")
+
+    def to_pdf(self):
+        path,_ = QFileDialog.getSaveFileName(self,"Guardar","","*.pdf")
+        if path:
+            pdf = FPDF(); pdf.add_page(); pdf.set_font("Arial",size=12)
+            pdf.cell(0,10,"Reporte Ítems",ln=1)
+            for n,t in self.db.fetchall("SELECT name,total FROM items"):
+                pdf.cell(0,8,f"{n}: {t}",ln=1)
+            pdf.add_page(); pdf.cell(0,10,"Reporte Atajados",ln=1)
+            for num,com in self.db.fetchall("SELECT number,comunidad FROM atajados"):
+                pdf.cell(0,8,f"{num} - {com}",ln=1)
+            pdf.output(path)
+            QMessageBox.information(self,"✔","PDF generado")
+
+    def to_word(self):
+        path,_ = QFileDialog.getSaveFileName(self,"Guardar","","*.docx")
+        if path:
+            doc = Document()
+            doc.add_heading("Reporte Ítems",level=1)
+            for n,t in self.db.fetchall("SELECT name,total FROM items"):
+                doc.add_paragraph(f"{n}: {t}")
+            doc.add_page_break()
+            doc.add_heading("Reporte Atajados",level=1)
+            for num,com in self.db.fetchall("SELECT number,comunidad FROM atajados"):
+                doc.add_paragraph(f"{num} - {com}")
+            doc.save(path)
+            QMessageBox.information(self,"✔","Word generado")
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    w = MainWindow(); w.show()
+    sys.exit(app.exec())
