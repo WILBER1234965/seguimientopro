@@ -1,6 +1,8 @@
 # cronograma_tab.py
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QTableWidget, QPushButton, QDialog, QFormLayout, QLineEdit, QTextEdit, QDateEdit, QTableWidgetItem
 from PyQt6.QtCore import QDate
+from datetime import datetime
+import pyqtgraph as pg
 from database import Database
 
 class CronogramaTab(QWidget):
@@ -10,13 +12,16 @@ class CronogramaTab(QWidget):
         self.layout = QVBoxLayout(self)
         self.table  = QTableWidget()
         self.btn    = QPushButton("Añadir Hito")
+        self.chart  = pg.PlotWidget(axisItems={"bottom": pg.graphicsItems.DateAxisItem.DateAxisItem()})
+        self.chart.showGrid(x=True, y=True, alpha=0.3)
         self.layout.addWidget(self.table)
         self.layout.addWidget(self.btn)
+        self.layout.addWidget(self.chart)
         self.btn.clicked.connect(self.open_add)
         self.refresh()
 
     def refresh(self):
-        rows = self.db.fetchall("SELECT id,name,date,notes FROM hitos")
+        rows = self.db.fetchall("SELECT id,name,date,notes FROM hitos ORDER BY date")
         hdrs = ["ID","Hito","Fecha","Obs."]
         self.table.setColumnCount(len(hdrs))
         self.table.setHorizontalHeaderLabels(hdrs)
@@ -24,6 +29,14 @@ class CronogramaTab(QWidget):
         for r,row in enumerate(rows):
             for c,val in enumerate(row):
                 self.table.setItem(r,c, QTableWidgetItem(str(val)))
+
+                        # Actualizar gráfico
+        self.chart.clear()
+        if rows:
+            xs = [datetime.strptime(d, "%Y-%m-%d").timestamp() for _,_,d,_ in rows]
+            ys = list(range(len(rows)))
+            self.chart.plot(xs, ys, pen=None, symbol='o', symbolBrush='orange')
+            self.chart.getAxis('left').setTicks([[ (i, name) for i, (_,name,_,_) in enumerate(rows) ]])
 
     def open_add(self):
         dlg = QDialog(self)

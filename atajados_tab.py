@@ -113,7 +113,7 @@ class AtajadosTab(QWidget):
         def on_save():
             try:
                 if not com.text() or not ben.text():
-                    raise ValueError                
+                    raise ValueError               
                 self.db.execute(
                     "INSERT INTO atajados(comunidad, number, beneficiario, ci, coord_e, coord_n) VALUES(?,?,?,?,?,?)",
                     (com.text(), int(num.text()), ben.text(), ci.text(),
