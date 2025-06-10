@@ -1,4 +1,7 @@
 # app.py
+"""Aplicación principal Qt."""
+
+import logging
 import sys
 from PyQt6.QtWidgets import QApplication, QMainWindow, QTabWidget, QMessageBox, QFileDialog
 import pandas as pd
@@ -32,44 +35,75 @@ class MainWindow(QMainWindow):
         pdf  = m.addAction("A PDF");   pdf.triggered.connect(self.to_pdf)
         docx = m.addAction("A Word");  docx.triggered.connect(self.to_word)
 
+    def closeEvent(self, event):
+        """Cerrar conexión a la base de datos al salir."""
+        self.db.close()
+        super().closeEvent(event)
+
     def to_excel(self):
-        df1 = pd.read_sql("SELECT * FROM items",    self.db.conn)
-        df2 = pd.read_sql("SELECT * FROM atajados", self.db.conn)
-        path,_ = QFileDialog.getSaveFileName(self,"Guardar","","*.xlsx")
-        if path:
+        """Exportar datos a Excel."""
+        path, _ = QFileDialog.getSaveFileName(self, "Guardar", "", "*.xlsx")
+        if not path:
+            return
+        try:
+            df1 = pd.read_sql("SELECT * FROM items", self.db.conn)
+            df2 = pd.read_sql("SELECT * FROM atajados", self.db.conn)
+
             with pd.ExcelWriter(path) as w:
-                df1.to_excel(w,"Ítems",index=False)
-                df2.to_excel(w,"Atajados",index=False)
-            QMessageBox.information(self,"✔","Excel generado")
+                df1.to_excel(w, "Ítems", index=False)
+                df2.to_excel(w, "Atajados", index=False)
+            QMessageBox.information(self, "✔", "Excel generado")
+            logging.info("Excel exportado a %s", path)
+        except Exception as exc:
+            logging.exception("Error al exportar Excel")
+            QMessageBox.critical(self, "Error", str(exc))
 
     def to_pdf(self):
-        path,_ = QFileDialog.getSaveFileName(self,"Guardar","","*.pdf")
-        if path:
-            pdf = FPDF(); pdf.add_page(); pdf.set_font("Arial",size=12)
-            pdf.cell(0,10,"Reporte Ítems",ln=1)
-            for n,t in self.db.fetchall("SELECT name,total FROM items"):
-                pdf.cell(0,8,f"{n}: {t}",ln=1)
-            pdf.add_page(); pdf.cell(0,10,"Reporte Atajados",ln=1)
-            for num,com in self.db.fetchall("SELECT number,comunidad FROM atajados"):
-                pdf.cell(0,8,f"{num} - {com}",ln=1)
+        """Generar reporte en PDF."""
+        path, _ = QFileDialog.getSaveFileName(self, "Guardar", "", "*.pdf")
+        if not path:
+            return
+        try:
+            pdf = FPDF()
+            pdf.add_page()
+            pdf.set_font("Arial", size=12)
+            pdf.cell(0, 10, "Reporte Ítems", ln=1)
+            for n, t in self.db.fetchall("SELECT name,total FROM items"):
+                pdf.cell(0, 8, f"{n}: {t}", ln=1)
+            pdf.add_page()
+            pdf.cell(0, 10, "Reporte Atajados", ln=1)
+            for num, com in self.db.fetchall("SELECT number,comunidad FROM atajados"):
+                pdf.cell(0, 8, f"{num} - {com}", ln=1)
             pdf.output(path)
-            QMessageBox.information(self,"✔","PDF generado")
+            QMessageBox.information(self, "✔", "PDF generado")
+            logging.info("PDF exportado a %s", path)
+        except Exception as exc:
+            logging.exception("Error al exportar PDF")
+            QMessageBox.critical(self, "Error", str(exc))
 
     def to_word(self):
-        path,_ = QFileDialog.getSaveFileName(self,"Guardar","","*.docx")
-        if path:
+        """Generar reporte en Word."""
+        path, _ = QFileDialog.getSaveFileName(self, "Guardar", "", "*.docx")
+        if not path:
+            return
+        try:
             doc = Document()
-            doc.add_heading("Reporte Ítems",level=1)
-            for n,t in self.db.fetchall("SELECT name,total FROM items"):
+            doc.add_heading("Reporte Ítems", level=1)
+            for n, t in self.db.fetchall("SELECT name,total FROM items"):
                 doc.add_paragraph(f"{n}: {t}")
             doc.add_page_break()
-            doc.add_heading("Reporte Atajados",level=1)
-            for num,com in self.db.fetchall("SELECT number,comunidad FROM atajados"):
+            doc.add_heading("Reporte Atajados", level=1)
+            for num, com in self.db.fetchall("SELECT number,comunidad FROM atajados"):
                 doc.add_paragraph(f"{num} - {com}")
             doc.save(path)
-            QMessageBox.information(self,"✔","Word generado")
+            QMessageBox.information(self, "✔", "Word generado")
+            logging.info("Word exportado a %s", path)
+        except Exception as exc:
+            logging.exception("Error al exportar Word")
+            QMessageBox.critical(self, "Error", str(exc))
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, filename="app.log", format="%(asctime)s %(levelname)s %(message)s")
     app = QApplication(sys.argv)
     w = MainWindow(); w.show()
     sys.exit(app.exec())

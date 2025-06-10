@@ -1,92 +1,91 @@
-# database.py
+"""Simple SQLite wrapper used by the application."""
+
 import os
 import sqlite3
+from contextlib import closing
 
-DB_FILE   = "atajados.db"
+DB_FILE = "atajados.db"
 PHOTO_DIR = "photos"
 os.makedirs(PHOTO_DIR, exist_ok=True)
 
 class Database:
-    def __init__(self, db_file=DB_FILE):
+    """SQLite database connection with helper methods."""
+
+    def __init__(self, db_file: str = DB_FILE):
         self.conn = sqlite3.connect(db_file)
         self.init_tables()
+    def close(self) -> None:
+        """Close the database connection."""
+        if self.conn:
+            self.conn.close()
+            self.conn = None
 
-    def init_tables(self):
-        c = self.conn.cursor()
-        # Tabla items
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS items (
-                id         INTEGER PRIMARY KEY,
-                name       TEXT,
-                unit       TEXT,
-                total      REAL,
-                incidence  REAL
+
+    def init_tables(self) -> None:
+        """Create tables if they do not exist."""
+        with closing(self.conn.cursor()) as c:
+            c.execute(
+                """
+                CREATE TABLE IF NOT EXISTS items (
+                    id INTEGER PRIMARY KEY,
+                    name TEXT,
+                    unit TEXT,
+                    total REAL,
+                    incidence REAL,
+                    active INTEGER DEFAULT 0
+                )
+                """
             )
-        ''')
-        # Añadir columna active si no existe
-        try:
-            c.execute("ALTER TABLE items ADD COLUMN active INTEGER DEFAULT 0")
-        except sqlite3.OperationalError:
-            pass
-
-        # Tabla atajados
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS atajados (
-                id           INTEGER PRIMARY KEY,
-                number       INTEGER,
-                comunidad    TEXT,
-                beneficiario TEXT,
-                ci           TEXT,
-                coord_e      REAL,
-                coord_n      REAL,
-                start_date   TEXT,
-                end_date     TEXT,
-                status       TEXT,
-                observations TEXT,
-                photo        TEXT
+            c.execute(
+                """
+                CREATE TABLE IF NOT EXISTS atajados (
+                    id INTEGER PRIMARY KEY,
+                    number INTEGER,
+                    comunidad TEXT,
+                    beneficiario TEXT,
+                    ci TEXT,
+                    coord_e REAL,
+                    coord_n REAL,
+                    start_date TEXT,
+                    end_date TEXT,
+                    status TEXT,
+                    observations TEXT,
+                    photo TEXT
+                )
+                """
             )
-        ''')
-
-        # Tabla avances con columnas de fechas
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS avances (
-                id          INTEGER PRIMARY KEY,
-                atajado_id  INTEGER,
-                item_id     INTEGER,
-                date        TEXT,
-                quantity    REAL,
-                start_date  TEXT,
-                end_date    TEXT
+            c.execute(
+                """
+                CREATE TABLE IF NOT EXISTS avances (
+                    id INTEGER PRIMARY KEY,
+                    atajado_id INTEGER,
+                    item_id INTEGER,
+                    date TEXT,
+                    quantity REAL,
+                    start_date TEXT,
+                    end_date TEXT
+                )
+                """
             )
-        ''')
-        # Si la tabla ya existía sin estas columnas, agregarlas
-        try:
-            c.execute("ALTER TABLE avances ADD COLUMN start_date TEXT")
-        except sqlite3.OperationalError:
-            pass
-        try:
-            c.execute("ALTER TABLE avances ADD COLUMN end_date TEXT")
-        except sqlite3.OperationalError:
-            pass
-
-        # Tabla hitos
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS hitos (
-                id    INTEGER PRIMARY KEY,
-                name  TEXT,
-                date  TEXT,
-                notes TEXT
+            c.execute(
+                """
+                CREATE TABLE IF NOT EXISTS hitos (
+                    id INTEGER PRIMARY KEY,
+                    name TEXT,
+                    date TEXT,
+                    notes TEXT
+                )
+                """
             )
-        ''')
+            self.conn.commit()
 
-        self.conn.commit()
-
-    def fetchall(self, sql, params=()):
-        cur = self.conn.cursor()
-        cur.execute(sql, params)
-        return cur.fetchall()
-
-    def execute(self, sql, params=()):
-        cur = self.conn.cursor()
-        cur.execute(sql, params)
-        self.conn.commit()
+    def fetchall(self, sql: str, params: tuple = ()):
+        """Return all rows for a query."""
+        with closing(self.conn.cursor()) as cur:
+            cur.execute(sql, params)
+            return cur.fetchall()
+    def execute(self, sql: str, params: tuple = ()) -> None:
+        """Execute an SQL statement and commit changes."""
+        with closing(self.conn.cursor()) as cur:
+            cur.execute(sql, params)
+            self.conn.commit()
