@@ -49,7 +49,7 @@ class DashboardTab(QWidget):
             self.get_count("En ejecución"),
             self.get_pending(),
         ]
-        bar = pg.BarGraphItem(x=list(range(4)), height=counts, width=0.6, brushes="skyblue")
+        bar = pg.BarGraphItem(x=list(range(4)), height=counts, width=0.6, brush="skyblue")
         chart.addItem(bar)
         ticks = [
             (0, "Total"),
