@@ -43,6 +43,11 @@ class DashboardTab(QWidget):
 
         main_layout.addLayout(metrics_layout)
 
+        # Avance global del proyecto
+        self.progress_label = QLabel(f"Avance del Proyecto: {self.db.get_project_progress():.0f}%")
+        self.progress_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        main_layout.addWidget(self.progress_label)
+
         # Gráfico de resumen de atajados
         chart = pg.PlotWidget()
         counts = [
@@ -73,6 +78,7 @@ class DashboardTab(QWidget):
             self.get_pending(),
         ]
         self.bar.setOpts(height=counts)
+        self.progress_label.setText(f"Avance del Proyecto: {self.db.get_project_progress():.0f}%")
 
     def get_count(self, status=None) -> int:
         if status:

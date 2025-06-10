@@ -4,7 +4,7 @@ import pandas as pd
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QTableWidget, QPushButton,
     QDialog, QFormLayout, QLineEdit, QTableWidgetItem, QFileDialog,
-    QMessageBox, QAbstractItemView, QHeaderView
+    QMessageBox, QAbstractItemView, QHeaderView, QComboBox
 )
 from PyQt6.QtCore import Qt
 from database import Database
@@ -57,15 +57,15 @@ class ItemsTab(QWidget):
         Recarga todos los ítems y su estado 'active' desde la DB.
         """
         self._loading = True
-        rows = self.db.fetchall("SELECT id, name, unit, total, incidence, active FROM items")
+        rows = self.db.fetchall("SELECT id, name, unit, total, incidence, active, progress FROM items")
         self.table.clearContents()
         self.table.setRowCount(len(rows))
-        self.table.setColumnCount(7)
+        self.table.setColumnCount(8)
         self.table.setHorizontalHeaderLabels([
-            "ID", "Activo", "Nombre", "Unidad", "Cant.", "P.U.", "Total"
+            "ID", "Activo", "Nombre", "Unidad", "Cant.", "P.U.", "Total", "Avance (%)"
         ])
 
-        for r, (iid, name, unit, qty, pu, active) in enumerate(rows):
+        for r, (iid, name, unit, qty, pu, active, progress) in enumerate(rows):
             total_price = qty * pu
 
             # ID
@@ -88,6 +88,24 @@ class ItemsTab(QWidget):
                 else:
                     item.setFlags(item.flags() ^ Qt.ItemFlag.ItemIsEditable)
                 self.table.setItem(r, c, item)
+
+            # Columna de avance
+            if active:
+                pct = self.db.fetchall(
+                    "SELECT AVG(quantity) FROM avances WHERE item_id=?",
+                    (iid,)
+                )[0][0] or 0
+                item = QTableWidgetItem(f"{pct:.0f}")
+                item.setFlags(item.flags() ^ Qt.ItemFlag.ItemIsEditable)
+                self.table.setItem(r, 7, item)
+            else:
+                combo = QComboBox()
+                combo.addItems(["50", "100"])
+                combo.setCurrentText(f"{int(progress)}")
+                combo.currentTextChanged.connect(
+                    lambda val, iid=iid: self.on_progress_changed(iid, val)
+                )
+                self.table.setCellWidget(r, 7, combo)
 
         self._loading = False
 
@@ -181,6 +199,15 @@ class ItemsTab(QWidget):
     def filter_rows(self, text: str):
         text = text.lower()
         for r in range(self.table.rowCount()):
-            visible = any(text in (self.table.item(r, c).text().lower() if self.table.item(r, c) else "")
-                           for c in range(self.table.columnCount()))
+            visible = any(
+                text in (self.table.item(r, c).text().lower() if self.table.item(r, c) else "")
+                for c in range(self.table.columnCount())
+            )
             self.table.setRowHidden(r, not visible)
+
+    def on_progress_changed(self, item_id: int, value: str):
+        try:
+            pct = float(value)
+        except ValueError:
+            return
+        self.db.execute("UPDATE items SET progress=? WHERE id=?", (pct, item_id))

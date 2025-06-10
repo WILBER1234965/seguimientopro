@@ -269,11 +269,17 @@ class AvanceTab(QWidget):
                     "INSERT INTO avances(atajado_id,item_id,date,quantity,start_date,end_date) VALUES(?,?,?,?,?,?)",
                     (self.current_atajado, iid, today, pct, sd, ed)
                 )
-        # actualizar estado del atajado segun avance promedio
-        avg = self.db.fetchall(
-            "SELECT AVG(quantity) FROM avances WHERE atajado_id=?",
+        # actualizar estado del atajado segun avance ponderado por costo
+        avg_row = self.db.fetchall(
+            """
+            SELECT SUM(i.total*i.incidence*a.quantity/100.0) / SUM(i.total*i.incidence)
+            FROM avances a JOIN items i ON a.item_id=i.id
+            WHERE a.atajado_id=? AND i.active=1
+            """,
             (self.current_atajado,)
-        )[0][0]
+        )
+        avg = (avg_row[0][0] or 0) * 100
+
         status = "Ejecutado" if avg == 100 else "En ejecución"
         self.db.execute(
             "UPDATE atajados SET status=? WHERE number=?",
@@ -286,7 +292,7 @@ class AvanceTab(QWidget):
             window = self.window()
             if hasattr(window, 'refresh_all'):
                 window.refresh_all()
-                
+
     def preview_image(self, item: QListWidgetItem):
         path = item.data(Qt.ItemDataRole.UserRole)
         paths = [self.img_list.item(i).data(Qt.ItemDataRole.UserRole) for i in range(self.img_list.count())]

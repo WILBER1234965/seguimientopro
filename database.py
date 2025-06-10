@@ -32,10 +32,17 @@ class Database:
                     unit TEXT,
                     total REAL,
                     incidence REAL,
-                    active INTEGER DEFAULT 0
+                    active INTEGER DEFAULT 0,
+                    progress REAL DEFAULT 0
                 )
                 """
             )
+
+
+            # Ensure backwards compatibility when the column did not exist
+            cols = [r[1] for r in c.execute("PRAGMA table_info(items)")]
+            if "progress" not in cols:
+                c.execute("ALTER TABLE items ADD COLUMN progress REAL DEFAULT 0")
             c.execute(
                 """
                 CREATE TABLE IF NOT EXISTS atajados (
@@ -89,3 +96,24 @@ class Database:
         with closing(self.conn.cursor()) as cur:
             cur.execute(sql, params)
             self.conn.commit()
+
+    def get_project_progress(self) -> float:
+        """Return total project progress weighted by item cost."""
+        rows = self.fetchall("SELECT id, total, incidence, active, progress FROM items")
+        if not rows:
+            return 0.0
+
+        total_cost = 0.0
+        executed = 0.0
+        for iid, qty, pu, active, prog in rows:
+            cost = qty * pu
+            total_cost += cost
+            if active:
+                pct = self.fetchall(
+                    "SELECT AVG(quantity) FROM avances WHERE item_id=?", (iid,)
+                )[0][0]
+                pct = pct or 0.0
+            else:
+                pct = prog or 0.0
+            executed += (pct / 100.0) * cost
+        return (executed / total_cost * 100.0) if total_cost else 0.0

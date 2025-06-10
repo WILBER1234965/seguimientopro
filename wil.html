@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Cadastro de Produtos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        
+        .glass-input {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        
+        .glass-input:focus {
+            background: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+        }
+        
+        .glass-button {
+            background: linear-gradient(to right, rgba(102, 126, 234, 0.8), rgba(118, 75, 162, 0.8));
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+        }
+        
+        .glass-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .product-card {
+            transition: all 0.3s ease;
+        }
+        
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+    </style>
+</head>
+<body class="text-white">
+    <div class="container mx-auto px-4 py-10">
+        <!-- Header -->
+        <header class="text-center mb-12 fade-in">
+            <h1 class="text-4xl font-bold mb-2">📦 Sistema de Produtos</h1>
+            <p class="opacity-80">Gerencie seu inventário com facilidade</p>
+        </header>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Formulário de Cadastro -->
+            <div class="glass-card p-6 lg:col-span-1 fade-in" style="animation-delay: 0.2s;">
+                <h2 class="text-2xl font-semibold mb-4 flex items-center">
+                    <i class="fas fa-plus-circle mr-2"></i> Cadastrar Produto
+                </h2>
+                
+                <form id="productForm" class="space-y-4">
+                    <div>
+                        <label for="name" class="block mb-1">Nome do Produto</label>
+                        <input type="text" id="name" required 
+                               class="glass-input w-full px-4 py-2 rounded-lg text-white placeholder-white placeholder-opacity-70 focus:outline-none">
+                    </div>
+                    
+                    <div>
+                        <label for="category" class="block mb-1">Categoria</label>
+                        <select id="category" required 
+                                class="glass-input w-full px-4 py-2 rounded-lg text-white focus:outline-none">
+                            <option value="" disabled selected>Selecione uma categoria</option>
+                            <option value="Eletrônicos">Eletrônicos</option>
+                            <option value="Vestuário">Vestuário</option>
+                            <option value="Alimentação">Alimentação</option>
+                            <option value="Móveis">Móveis</option>
+                            <option value="Cosméticos">Cosméticos</option>
+                        </select>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="price" class="block mb-1">Preço (R$)</label>
+                            <input type="number" id="price" step="0.01" required 
+                                   class="glass-input w-full px-4 py-2 rounded-lg text-white placeholder-white placeholder-opacity-70 focus:outline-none">
+                        </div>
+                        
+                        <div>
+                            <label for="quantity" class="block mb-1">Quantidade</label>
+                            <input type="number" id="quantity" required 
+                                   class="glass-input w-full px-4 py-2 rounded-lg text-white placeholder-white placeholder-opacity-70 focus:outline-none">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="description" class="block mb-1">Descrição</label>
+                        <textarea id="description" rows="3"
+                                  class="glass-input w-full px-4 py-2 rounded-lg text-white placeholder-white placeholder-opacity-70 focus:outline-none"></textarea>
+                    </div>
+                    
+                    <button type="submit" 
+                            class="glass-button w-full py-3 rounded-lg font-medium flex items-center justify-center">
+                        <i class="fas fa-save mr-2"></i> Salvar Produto
+                    </button>
+                </form>
+            </div>
+            
+            <!-- Lista de Produtos -->
+            <div class="glass-card p-6 lg:col-span-2 fade-in" style="animation-delay: 0.4s;">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-semibold flex items-center">
+                        <i class="fas fa-boxes mr-2"></i> Meus Produtos
+                    </h2>
+                    
+                    <div class="relative">
+                        <input type="text" id="searchInput" placeholder="Buscar produto..." 
+                               class="glass-input px-4 py-2 rounded-full text-white placeholder-white placeholder-opacity-70 focus:outline-none pr-10">
+                        <i class="fas fa-search absolute right-3 top-2.5 opacity-70"></i>
+                    </div>
+                </div>
+                
+                <!-- Filtros -->
+                <div class="flex flex-wrap gap-2 mb-6">
+                    <button class="filter-btn glass-button px-4 py-1 rounded-full text-sm" data-filter="all">
+                        Todos
+                    </button>
+                    <button class="filter-btn glass-button px-4 py-1 rounded-full text-sm" data-filter="Eletrônicos">
+                        Eletrônicos
+                    </button>
+                    <button class="filter-btn glass-button px-4 py-1 rounded-full text-sm" data-filter="Vestuário">
+                        Vestuário
+                    </button>
+                    <button class="filter-btn glass-button px-4 py-1 rounded-full text-sm" data-filter="Alimentação">
+                        Alimentação
+                    </button>
+                    <button class="filter-btn glass-button px-4 py-1 rounded-full text-sm" data-filter="Móveis">
+                        Móveis
+                    </button>
+                    <button class="filter-btn glass-button px-4 py-1 rounded-full text-sm" data-filter="Cosméticos">
+                        Cosméticos
+                    </button>
+                </div>
+                
+                <!-- Tabela de Produtos -->
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-white border-opacity-20">
+                                <th class="pb-3 text-left">Nome</th>
+                                <th class="pb-3 text-left">Categoria</th>
+                                <th class="pb-3 text-right">Preço</th>
+                                <th class="pb-3 text-right">Quantidade</th>
+                                <th class="pb-3 text-center">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="productTableBody">
+                            <!-- Produtos serão adicionados aqui via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div id="noProductsMessage" class="text-center py-10 opacity-70 hidden">
+                    <i class="fas fa-box-open text-4xl mb-3"></i>
+                    <p>Nenhum produto cadastrado ainda.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Edição -->
+    <div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="glass-card p-6 w-full max-w-md mx-4">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold">Editar Produto</h3>
+                <button id="closeModal" class="text-xl">&times;</button>
+            </div>
+            
+            <form id="editForm">
+                <input type="hidden" id="editId">
+                <div class="space-y-4">
+                    <div>
+                        <label for="editName" class="block mb-1">Nome do Produto</label>
+                        <input type="text" id="editName" required 
+                               class="glass-input w-full px-4 py-2 rounded-lg text-white placeholder-white placeholder-opacity-70 focus:outline-none">
+                    </div>
+                    
+                    <div>
+                        <label for="editCategory" class="block mb-1">Categoria</label>
+                        <select id="editCategory" required 
+                                class="glass-input w-full px-4 py-2 rounded-lg text-white focus:outline-none">
+                            <option value="Eletrônicos">Eletrônicos</option>
+                            <option value="Vestuário">Vestuário</option>
+                            <option value="Alimentação">Alimentação</option>
+                            <option value="Móveis">Móveis</option>
+                            <option value="Cosméticos">Cosméticos</option>
+                        </select>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="editPrice" class="block mb-1">Preço (R$)</label>
+                            <input type="number" id="editPrice" step="0.01" required 
+                                   class="glass-input w-full px-4 py-2 rounded-lg text-white placeholder-white placeholder-opacity-70 focus:outline-none">
+                        </div>
+                        
+                        <div>
+                            <label for="editQuantity" class="block mb-1">Quantidade</label>
+                            <input type="number" id="editQuantity" required 
+                                   class="glass-input w-full px-4 py-2 rounded-lg text-white placeholder-white placeholder-opacity-70 focus:outline-none">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label for="editDescription" class="block mb-1">Descrição</label>
+                        <textarea id="editDescription" rows="3"
+                                  class="glass-input w-full px-4 py-2 rounded-lg text-white placeholder-white placeholder-opacity-70 focus:outline-none"></textarea>
+                    </div>
+                    
+                    <div class="flex gap-3 pt-2">
+                        <button type="submit" 
+                                class="glass-button flex-1 py-2 rounded-lg font-medium">
+                            Salvar Alterações
+                        </button>
+                        <button type="button" id="deleteProduct" 
+                                class="bg-red-500 bg-opacity-80 flex-1 py-2 rounded-lg font-medium">
+                            Excluir
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Array para armazenar os produtos
+            let products = JSON.parse(localStorage.getItem('products')) || [];
+            
+            // Elementos do DOM
+            const productForm = document.getElementById('productForm');
+            const productTableBody = document.getElementById('productTableBody');
+            const noProductsMessage = document.getElementById('noProductsMessage');
+            const searchInput = document.getElementById('searchInput');
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            const editModal = document.getElementById('editModal');
+            const closeModal = document.getElementById('closeModal');
+            const editForm = document.getElementById('editForm');
+            const deleteProductBtn = document.getElementById('deleteProduct');
+            
+            // Carregar produtos ao iniciar
+            loadProducts();
+            
+            // Adicionar produto
+            productForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const name = document.getElementById('name').value;
+                const category = document.getElementById('category').value;
+                const price = parseFloat(document.getElementById('price').value);
+                const quantity = parseInt(document.getElementById('quantity').value);
+                const description = document.getElementById('description').value;
+                
+                // Gerar ID único
+                const id = Date.now().toString();
+                
+                // Adicionar produto ao array
+                products.push({
+                    id,
+                    name,
+                    category,
+                    price,
+                    quantity,
+                    description,
+                    createdAt: new Date()
+                });
+                
+                // Salvar no localStorage
+                saveProducts();
+                
+                // Recarregar tabela
+                loadProducts();
+                
+                // Limpar formulário
+                productForm.reset();
+                
+                // Feedback visual
+                showNotification('Produto adicionado com sucesso!', 'success');
+            });
+            
+            // Pesquisar produtos
+            searchInput.addEventListener('input', function() {
+                loadProducts(this.value.toLowerCase());
+            });
+            
+            // Filtrar produtos por categoria
+            filterButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const filter = this.dataset.filter;
+                    loadProducts('', filter);
+                    
+                    // Atualizar botão ativo
+                    filterButtons.forEach(btn => btn.classList.remove('bg-white', 'bg-opacity-30'));
+                    if (filter !== 'all') {
+                        this.classList.add('bg-white', 'bg-opacity-30');
+                    }
+                });
+            });
+            
+            // Fechar modal
+            closeModal.addEventListener('click', function() {
+                editModal.classList.add('hidden');
+            });
+            
+            // Salvar edições
+            editForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const id = document.getElementById('editId').value;
+                const name = document.getElementById('editName').value;
+                const category = document.getElementById('editCategory').value;
+                const price = parseFloat(document.getElementById('editPrice').value);
+                const quantity = parseInt(document.getElementById('editQuantity').value);
+                const description = document.getElementById('editDescription').value;
+                
+                // Atualizar produto
+                const index = products.findIndex(p => p.id === id);
+                if (index !== -1) {
+                    products[index] = {
+                        ...products[index],
+                        name,
+                        category,
+                        price,
+                        quantity,
+                        description
+                    };
+                    
+                    // Salvar no localStorage
+                    saveProducts();
+                    
+                    // Recarregar tabela
+                    loadProducts();
+                    
+                    // Fechar modal
+                    editModal.classList.add('hidden');
+                    
+                    // Feedback visual
+                    showNotification('Produto atualizado com sucesso!', 'success');
+                }
+            });
+            
+            // Excluir produto
+            deleteProductBtn.addEventListener('click', function() {
+                const id = document.getElementById('editId').value;
+                
+                if (confirm('Tem certeza que deseja excluir este produto?')) {
+                    // Remover produto
+                    products = products.filter(p => p.id !== id);
+                    
+                    // Salvar no localStorage
+                    saveProducts();
+                    
+                    // Recarregar tabela
+                    loadProducts();
+                    
+                    // Fechar modal
+                    editModal.classList.add('hidden');
+                    
+                    // Feedback visual
+                    showNotification('Produto excluído com sucesso!', 'danger');
+                }
+            });
+            
+            // Função para carregar produtos na tabela
+            function loadProducts(searchTerm = '', categoryFilter = 'all') {
+                let filteredProducts = [...products];
+                
+                // Aplicar filtro de categoria
+                if (categoryFilter !== 'all') {
+                    filteredProducts = filteredProducts.filter(p => p.category === categoryFilter);
+                }
+                
+                // Aplicar busca
+                if (searchTerm) {
+                    filteredProducts = filteredProducts.filter(p => 
+                        p.name.toLowerCase().includes(searchTerm) || 
+                        p.description.toLowerCase().includes(searchTerm) ||
+                        p.category.toLowerCase().includes(searchTerm)
+                    );
+                }
+                
+                // Ordenar por data de criação (mais recentes primeiro)
+                filteredProducts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                
+                // Limpar tabela
+                productTableBody.innerHTML = '';
+                
+                // Mostrar mensagem se não houver produtos
+                if (filteredProducts.length === 0) {
+                    noProductsMessage.classList.remove('hidden');
+                } else {
+                    noProductsMessage.classList.add('hidden');
+                    
+                    // Adicionar produtos à tabela
+                    filteredProducts.forEach((product, index) => {
+                        const row = document.createElement('tr');
+                        row.className = `border-b border-white border-opacity-10 product-card ${index % 2 === 0 ? 'bg-white bg-opacity-05' : ''}`;
+                        row.innerHTML = `
+                            <td class="py-3">
+                                <div class="font-medium">${product.name}</div>
+                                <div class="text-sm opacity-70 truncate max-w-xs">${product.description || 'Sem descrição'}</div>
+                            </td>
+                            <td class="py-3">
+                                <span class="px-2 py-1 rounded-full text-xs glass-button">${product.category}</span>
+                            </td>
+                            <td class="py-3 text-right font-medium">R$ ${product.price.toFixed(2)}</td>
+                            <td class="py-3 text-right ${product.quantity <= 5 ? 'text-yellow-400' : ''} ${product.quantity === 0 ? 'text-red-400' : ''}">
+                                ${product.quantity}
+                            </td>
+                            <td class="py-3 text-center">
+                                <button class="edit-btn mr-2 text-blue-300 hover:text-blue-400" data-id="${product.id}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="delete-btn text-red-300 hover:text-red-400" data-id="${product.id}">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </td>
+                        `;
+                        
+                        productTableBody.appendChild(row);
+                    });
+                    
+                    // Adicionar eventos aos botões de edição e exclusão
+                    document.querySelectorAll('.edit-btn').forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            const productId = this.dataset.id;
+                            const product = products.find(p => p.id === productId);
+                            
+                            if (product) {
+                                // Preencher o modal de edição
+                                document.getElementById('editId').value = product.id;
+                                document.getElementById('editName').value = product.name;
+                                document.getElementById('editCategory').value = product.category;
+                                document.getElementById('editPrice').value = product.price;
+                                document.getElementById('editQuantity').value = product.quantity;
+                                document.getElementById('editDescription').value = product.description || '';
+                                
+                                // Mostrar modal
+                                editModal.classList.remove('hidden');
+                            }
+                        });
+                    });
+                    
+                    document.querySelectorAll('.delete-btn').forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            const productId = this.dataset.id;
+                            
+                            if (confirm('Tem certeza que deseja excluir este produto?')) {
+                                // Remover produto
+                                products = products.filter(p => p.id !== productId);
+                                
+                                // Salvar no localStorage
+                                saveProducts();
+                                
+                                // Recarregar tabela
+                                loadProducts();
+                                
+                                // Feedback visual
+                                showNotification('Produto excluído com sucesso!', 'danger');
+                            }
+                        });
+                    });
+                }
+            }
+            
+            // Função para salvar produtos no localStorage
+            function saveProducts() {
+                localStorage.setItem('products', JSON.stringify(products));
+            }
+            
+            // Função para mostrar notificações
+            function showNotification(message, type) {
+                const notification = document.createElement('div');
+                notification.className = `fixed bottom-4 right-4 glass-card px-6 py-3 rounded-lg flex items-center shadow-lg transform translate-y-10 opacity-0 transition-all duration-300`;
+                
+                // Definir cor com base no tipo
+                if (type === 'success') {
+                    notification.innerHTML = `<i class="fas fa-check-circle text-green-300 mr-2"></i> ${message}`;
+                } else if (type === 'danger') {
+                    notification.innerHTML = `<i class="fas fa-exclamation-circle text-red-300 mr-2"></i> ${message}`;
+                } else {
+                    notification.innerHTML = `<i class="fas fa-info-circle text-blue-300 mr-2"></i> ${message}`;
+                }
+                
+                document.body.appendChild(notification);
+                
+                // Mostrar notificação
+                setTimeout(() => {
+                    notification.classList.remove('translate-y-10', 'opacity-0');
+                    notification.classList.add('translate-y-0', 'opacity-100');
+                }, 100);
+                
+                // Esconder e remover após alguns segundos
+                setTimeout(() => {
+                    notification.classList.add('translate-y-10', 'opacity-0');
+                    setTimeout(() => {
+                        notification.remove();
+                    }, 300);
+                }, 3000);
+            }
+        });
+    </script>
+</body>
+</html>
