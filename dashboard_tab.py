@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QApplication
 from PyQt6.QtGui import QIcon, QPixmap
 from PyQt6.QtCore import Qt
+import pyqtgraph as pg
 from database import Database
 
 class DashboardTab(QWidget):
@@ -39,6 +40,25 @@ class DashboardTab(QWidget):
             metrics_layout.addWidget(widget)
 
         main_layout.addLayout(metrics_layout)
+
+        # Gráfico de resumen de atajados
+        chart = pg.PlotWidget()
+        counts = [
+            self.get_count(),
+            self.get_count("Ejecutado"),
+            self.get_count("En ejecución"),
+            self.get_pending(),
+        ]
+        bar = pg.BarGraphItem(x=list(range(4)), height=counts, width=0.6, brushes="skyblue")
+        chart.addItem(bar)
+        ticks = [
+            (0, "Total"),
+            (1, "Ejecutado"),
+            (2, "En ejec."),
+            (3, "Pendiente"),
+        ]
+        chart.getAxis("bottom").setTicks([ticks])
+        main_layout.addWidget(chart)
         main_layout.addStretch()
 
     def get_count(self, status=None) -> int:

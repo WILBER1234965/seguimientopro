@@ -25,9 +25,11 @@ class ItemsTab(QWidget):
         self.import_btn = QPushButton("📥 Importar Ítems")
         self.add_btn    = QPushButton("➕ Añadir Ítem")
         self.del_btn    = QPushButton("🗑 Eliminar Ítem")
+        self.search     = QLineEdit(); self.search.setPlaceholderText("Filtrar...")
         toolbar.addWidget(self.import_btn)
         toolbar.addWidget(self.add_btn)
         toolbar.addWidget(self.del_btn)
+        toolbar.addWidget(self.search)
         toolbar.addStretch()
         self.layout.addLayout(toolbar)
 
@@ -44,6 +46,7 @@ class ItemsTab(QWidget):
         self.add_btn.clicked.connect(self.open_add)
         self.del_btn.clicked.connect(self.delete_item)
         self.table.cellChanged.connect(self.on_cell_changed)
+        self.search.textChanged.connect(self.filter_rows)
 
         # Inicializar
         self._loading = False
@@ -174,3 +177,10 @@ class ItemsTab(QWidget):
         row=sel[0].row(); iid=int(self.table.item(row,0).text())
         if QMessageBox.question(self,"Confirmar",f"Eliminar ítem {iid}?",QMessageBox.Yes|QMessageBox.No)==QMessageBox.Yes:
             self.db.execute("DELETE FROM items WHERE id=?",(iid,)); self.refresh()
+
+    def filter_rows(self, text: str):
+        text = text.lower()
+        for r in range(self.table.rowCount()):
+            visible = any(text in (self.table.item(r, c).text().lower() if self.table.item(r, c) else "")
+                           for c in range(self.table.columnCount()))
+            self.table.setRowHidden(r, not visible)

@@ -1,7 +1,8 @@
 # Seguimiento de Atajados
 
 Aplicación Qt para gestionar y realizar seguimiento de obras de atajados.
-
+La interfaz utiliza el tema oscuro de **QDarkStyle** y muestra un gráfico de
+estado en la pestaña de inicio.
 ## Instalación
 
 1. Cree un entorno virtual de Python.
@@ -28,4 +29,3 @@ Para ejecutar las pruebas unitarias:
 ```bash
 python -m unittest discover tests
 ```
-wilo

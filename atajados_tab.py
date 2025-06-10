@@ -112,6 +112,8 @@ class AtajadosTab(QWidget):
 
         def on_save():
             try:
+                if not com.text() or not ben.text():
+                    raise ValueError                
                 self.db.execute(
                     "INSERT INTO atajados(comunidad, number, beneficiario, ci, coord_e, coord_n) VALUES(?,?,?,?,?,?)",
                     (com.text(), int(num.text()), ben.text(), ci.text(),
@@ -120,7 +122,7 @@ class AtajadosTab(QWidget):
                 dlg.accept()
                 self.refresh()
             except ValueError:
-                QMessageBox.warning(dlg, "Error", "Asegúrate de que 'Atajado', 'Este' y 'Norte' sean numéricos.")
+                QMessageBox.warning(dlg, "Error", "Asegúrate de que todos los campos sean válidos y numéricos donde corresponda.")
 
         save.clicked.connect(on_save)
         dlg.exec()

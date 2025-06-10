@@ -4,6 +4,7 @@
 import logging
 import sys
 from PyQt6.QtWidgets import QApplication, QMainWindow, QTabWidget, QMessageBox, QFileDialog
+import qdarkstyle
 import pandas as pd
 from fpdf import FPDF
 from docx import Document
@@ -105,5 +106,6 @@ class MainWindow(QMainWindow):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, filename="app.log", format="%(asctime)s %(levelname)s %(message)s")
     app = QApplication(sys.argv)
+    app.setStyleSheet(qdarkstyle.load_stylesheet())
     w = MainWindow(); w.show()
     sys.exit(app.exec())
