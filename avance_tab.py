@@ -73,10 +73,11 @@ class ImagePreviewDialog(QDialog):
             self.label.setPixmap(scaled)
 
 class AvanceTab(QWidget):
-    def __init__(self, db: Database):
+    def __init__(self, db: Database, save_callback=None):
         super().__init__()
         self.db = db
         self.current_atajado = None
+        self._save_callback = save_callback
 
         layout = QVBoxLayout(self)
         # Selector
@@ -268,8 +269,24 @@ class AvanceTab(QWidget):
                     "INSERT INTO avances(atajado_id,item_id,date,quantity,start_date,end_date) VALUES(?,?,?,?,?,?)",
                     (self.current_atajado, iid, today, pct, sd, ed)
                 )
+        # actualizar estado del atajado segun avance promedio
+        avg = self.db.fetchall(
+            "SELECT AVG(quantity) FROM avances WHERE atajado_id=?",
+            (self.current_atajado,)
+        )[0][0]
+        status = "Ejecutado" if avg == 100 else "En ejecución"
+        self.db.execute(
+            "UPDATE atajados SET status=? WHERE number=?",
+            (status, self.current_atajado)
+        )                
         QMessageBox.information(self, "Guardado", "Avances registrados correctamente.")
-
+        if self._save_callback:
+            self._save_callback()
+        else:
+            window = self.window()
+            if hasattr(window, 'refresh_all'):
+                window.refresh_all()
+                
     def preview_image(self, item: QListWidgetItem):
         path = item.data(Qt.ItemDataRole.UserRole)
         paths = [self.img_list.item(i).data(Qt.ItemDataRole.UserRole) for i in range(self.img_list.count())]

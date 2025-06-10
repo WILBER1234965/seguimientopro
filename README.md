@@ -2,7 +2,8 @@
 
 Aplicación Qt para gestionar y realizar seguimiento de obras de atajados.
 La interfaz utiliza el tema oscuro de **QDarkStyle** y muestra un gráfico de
-estado en la pestaña de inicio.
+estado en la pestaña de inicio. Ahora se incluye una pestaña de **Resumen** que
+muestra el porcentaje de avance por atajado ordenado por fecha de registro.
 ## Instalación
 
 1. Cree un entorno virtual de Python.

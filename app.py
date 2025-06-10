@@ -15,6 +15,7 @@ from items_tab      import ItemsTab
 from atajados_tab   import AtajadosTab
 from avance_tab     import AvanceTab
 from cronograma_tab import CronogramaTab
+from summary_tab    import SummaryTab
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -24,11 +25,19 @@ class MainWindow(QMainWindow):
         self.resize(1200,800)
 
         tabs = QTabWidget()
-        tabs.addTab(DashboardTab(self.db), "Inicio")
-        tabs.addTab(ItemsTab(self.db),     "Ítems")
-        tabs.addTab(AtajadosTab(self.db),"Atajados")
-        tabs.addTab(AvanceTab(self.db),    "Seguimiento")
-        tabs.addTab(CronogramaTab(self.db),"Cronograma")
+        self.dashboard_tab = DashboardTab(self.db)
+        self.items_tab = ItemsTab(self.db)
+        self.atajados_tab = AtajadosTab(self.db)
+        self.avance_tab = AvanceTab(self.db, save_callback=self.refresh_all)
+        self.cronograma_tab = CronogramaTab(self.db)
+        self.summary_tab = SummaryTab(self.db)
+
+        tabs.addTab(self.dashboard_tab, "Inicio")
+        tabs.addTab(self.items_tab, "Ítems")
+        tabs.addTab(self.atajados_tab, "Atajados")
+        tabs.addTab(self.avance_tab, "Seguimiento")
+        tabs.addTab(self.cronograma_tab, "Cronograma")
+        tabs.addTab(self.summary_tab, "Resumen")
         self.setCentralWidget(tabs)
 
         m = self.menuBar().addMenu("Exportar")
@@ -36,6 +45,14 @@ class MainWindow(QMainWindow):
         pdf  = m.addAction("A PDF");   pdf.triggered.connect(self.to_pdf)
         docx = m.addAction("A Word");  docx.triggered.connect(self.to_word)
 
+    def refresh_all(self):
+        """Actualizar todas las pestañas."""
+        self.dashboard_tab.refresh()
+        self.items_tab.refresh()
+        self.atajados_tab.refresh()
+        self.cronograma_tab.refresh()
+        self.summary_tab.refresh()
+        
     def closeEvent(self, event):
         """Cerrar conexión a la base de datos al salir."""
         self.db.close()

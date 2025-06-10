@@ -23,6 +23,7 @@ class DashboardTab(QWidget):
             ("En ejecución",  "icons/running.png",  lambda: self.get_count("En ejecución")),
             ("Pendientes",    "icons/pending.png",  lambda: self.get_pending())
         ]
+        self.metric_labels = []
         for label_text, icon_path, func in metrics:
             widget = QWidget()
             v = QVBoxLayout(widget)
@@ -38,6 +39,7 @@ class DashboardTab(QWidget):
             v.addWidget(text_lbl)
             v.addWidget(caption)
             metrics_layout.addWidget(widget)
+            self.metric_labels.append((text_lbl, func))            
 
         main_layout.addLayout(metrics_layout)
 
@@ -49,8 +51,8 @@ class DashboardTab(QWidget):
             self.get_count("En ejecución"),
             self.get_pending(),
         ]
-        bar = pg.BarGraphItem(x=list(range(4)), height=counts, width=0.6, brush="skyblue")
-        chart.addItem(bar)
+        self.bar = pg.BarGraphItem(x=list(range(4)), height=counts, width=0.6, brush="skyblue")
+        chart.addItem(self.bar)
         ticks = [
             (0, "Total"),
             (1, "Ejecutado"),
@@ -60,6 +62,17 @@ class DashboardTab(QWidget):
         chart.getAxis("bottom").setTicks([ticks])
         main_layout.addWidget(chart)
         main_layout.addStretch()
+
+    def refresh(self):
+        for lbl, func in self.metric_labels:
+            lbl.setText(f"<b>{func()}</b>")
+        counts = [
+            self.get_count(),
+            self.get_count("Ejecutado"),
+            self.get_count("En ejecución"),
+            self.get_pending(),
+        ]
+        self.bar.setOpts(height=counts)
 
     def get_count(self, status=None) -> int:
         if status:
