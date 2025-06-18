@@ -6,7 +6,9 @@ from contextlib import closing
 
 DB_FILE = "atajados.db"
 PHOTO_DIR = "photos"
+# Crear directorio de fotos si no existe
 os.makedirs(PHOTO_DIR, exist_ok=True)
+
 
 class Database:
     """SQLite database connection with helper methods."""
@@ -14,16 +16,17 @@ class Database:
     def __init__(self, db_file: str = DB_FILE):
         self.conn = sqlite3.connect(db_file)
         self.init_tables()
+
     def close(self) -> None:
         """Close the database connection."""
         if self.conn:
             self.conn.close()
             self.conn = None
 
-
     def init_tables(self) -> None:
         """Create tables if they do not exist."""
         with closing(self.conn.cursor()) as c:
+            # Tabla de items
             c.execute(
                 """
                 CREATE TABLE IF NOT EXISTS items (
@@ -38,11 +41,12 @@ class Database:
                 """
             )
 
-
-            # Ensure backwards compatibility when the column did not exist
+            # Compatibilidad hacia atrás para columna 'progress'
             cols = [r[1] for r in c.execute("PRAGMA table_info(items)")]
             if "progress" not in cols:
                 c.execute("ALTER TABLE items ADD COLUMN progress REAL DEFAULT 0")
+
+            # Tabla de atajados
             c.execute(
                 """
                 CREATE TABLE IF NOT EXISTS atajados (
@@ -61,6 +65,8 @@ class Database:
                 )
                 """
             )
+
+            # Tabla de avances
             c.execute(
                 """
                 CREATE TABLE IF NOT EXISTS avances (
@@ -74,16 +80,19 @@ class Database:
                 )
                 """
             )
+
+            # Tabla de cronograma (hitos)
             c.execute(
                 """
-                CREATE TABLE IF NOT EXISTS hitos (
+                CREATE TABLE IF NOT EXISTS cronograma (
                     id INTEGER PRIMARY KEY,
-                    name TEXT,
-                    date TEXT,
-                    notes TEXT
+                    hito TEXT NOT NULL,
+                    date TEXT NOT NULL,
+                    obs TEXT
                 )
                 """
             )
+
             self.conn.commit()
 
     def fetchall(self, sql: str, params: tuple = ()):
@@ -91,6 +100,7 @@ class Database:
         with closing(self.conn.cursor()) as cur:
             cur.execute(sql, params)
             return cur.fetchall()
+
     def execute(self, sql: str, params: tuple = ()) -> None:
         """Execute an SQL statement and commit changes."""
         with closing(self.conn.cursor()) as cur:
@@ -99,7 +109,9 @@ class Database:
 
     def get_project_progress(self) -> float:
         """Return total project progress weighted by item cost."""
-        rows = self.fetchall("SELECT id, total, incidence, active, progress FROM items")
+        rows = self.fetchall(
+            "SELECT id, total, incidence, active, progress FROM items"
+        )
         if not rows:
             return 0.0
 

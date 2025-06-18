@@ -43,5 +43,5 @@ class SummaryTab(QWidget):
             self.table.setItem(r, 0, QTableWidgetItem(str(num)))
             self.table.setItem(r, 1, QTableWidgetItem(ben))
             self.table.setItem(r, 2, QTableWidgetItem(dt))
-            self.table.setItem(r, 3, QTableWidgetItem(f"{pct:.0f}"))
+            self.table.setItem(r, 3, QTableWidgetItem(f"{pct:.2f}%"))
         self.table.resizeColumnsToContents()

@@ -4,6 +4,8 @@
 import logging
 import sys
 from PyQt6.QtWidgets import QApplication, QMainWindow, QTabWidget, QMessageBox, QFileDialog
+from PyQt6.QtGui import QIcon
+from PyQt6.QtGui import QIcon
 import qdarkstyle
 import pandas as pd
 from fpdf import FPDF
@@ -22,6 +24,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.db = Database()
         self.setWindowTitle("Supervisión de Atajados")
+        # Icono de la ventana principal
+        self.setWindowIcon(QIcon("resources/icono.png"))
         self.resize(1200,800)
 
         tabs = QTabWidget()
@@ -123,6 +127,9 @@ class MainWindow(QMainWindow):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, filename="app.log", format="%(asctime)s %(levelname)s %(message)s")
     app = QApplication(sys.argv)
+    # Nombre interno de la aplicación y organización
+    app.setApplicationName("SupervisiónAtajados")
+    app.setOrganizationName("WILOPRO")
     app.setStyleSheet(qdarkstyle.load_stylesheet())
     w = MainWindow(); w.show()
     sys.exit(app.exec())
