@@ -1,160 +1,165 @@
+# cronograma_tab.py
 from PyQt6.QtWidgets import (
-    QWidget, QVBoxLayout, QScrollArea
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QComboBox,
+    QSplitter, QTableWidget, QTableWidgetItem
 )
 from PyQt6.QtCore import Qt
-from database import Database
-
-# Importar FigureCanvas y Toolbar para PyQt6
-try:
-    from matplotlib.backends.backend_qt6agg import (
-        FigureCanvasQTAgg as FigureCanvas,
-        NavigationToolbar2QT as NavigationToolbar
-    )
-except ImportError:
-    from matplotlib.backends.backend_qt5agg import (
-        FigureCanvasQTAgg as FigureCanvas,
-        NavigationToolbar2QT as NavigationToolbar
-    )
-
+from matplotlib.backends.backend_qtagg import (
+    FigureCanvasQTAgg as FigureCanvas,
+    NavigationToolbar2QT as NavigationToolbar,
+)
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-from datetime import datetime
-
-# Aplicar estilo profesional
-try:
-    plt.style.use('seaborn-whitegrid')
-except OSError:
-    plt.style.use('ggplot')
+import datetime
 
 class CronogramaTab(QWidget):
-    """Tab que muestra únicamente el diagrama de Gantt profesional con scroll e interacción."""
-    def __init__(self, db: Database):
-        super().__init__()
+    def __init__(self, db, parent=None):
+        super().__init__(parent)
         self.db = db
-        self._setup_ui()
-        self.refresh()
+        self.tasks = []
+        self.init_ui()
 
-    def _setup_ui(self):
+    def init_ui(self):
         layout = QVBoxLayout(self)
 
-        # Configurar figura y ejes
-        self.figure, self.ax = plt.subplots(figsize=(16, 10), dpi=100)
-        self.figure.patch.set_facecolor('white')
-        self.ax.set_facecolor('#f9f9f9')
+        # Control de escala
+        ctrl = QHBoxLayout()
+        lbl = QLabel("% escala:")
+        self.cmb_scale = QComboBox()
+        self.cmb_scale.addItems(["100", "80", "60", "40", "20"])
+        self.cmb_scale.setCurrentText("80")
+        self.cmb_scale.currentTextChanged.connect(self.draw_gantt)
+        ctrl.addWidget(lbl)
+        ctrl.addWidget(self.cmb_scale)
+        ctrl.addStretch()
+        layout.addLayout(ctrl)
+
+        # Splitter: tabla y gráfico Gantt
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+
+        # Tabla de items
+        self.table = QTableWidget()
+        self.table.setColumnCount(8)
+        self.table.setHorizontalHeaderLabels([
+            "Nº", "Actividad", "Hrs.", "Inicia", "Finaliza", "C.", "P.", "Días"
+        ])
+        self.table.setAlternatingRowColors(True)
+        splitter.addWidget(self.table)
+
+        # Contenedor de gráfico
+        gantt_widget = QWidget()
+        gantt_layout = QVBoxLayout(gantt_widget)
+        self.figure = plt.Figure()
         self.canvas = FigureCanvas(self.figure)
         self.toolbar = NavigationToolbar(self.canvas, self)
+        gantt_layout.addWidget(self.toolbar)
+        gantt_layout.addWidget(self.canvas)
+        splitter.addWidget(gantt_widget)
 
-        # Área de scroll para el Gantt
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(False)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        splitter.setStretchFactor(0, 1)
+        splitter.setStretchFactor(1, 3)
+        layout.addWidget(splitter)
 
-        container = QWidget()
-        vbox = QVBoxLayout(container)
-        vbox.setContentsMargins(0, 0, 0, 0)
-        vbox.addWidget(self.toolbar)
-        vbox.addWidget(self.canvas)
-        container.setLayout(vbox)
+        # Carga data y pinta
+        self.load_data()
 
-        # Fijar tamaño del canvas para habilitar scroll
-        width, height = self.figure.get_size_inches()
-        dpi = self.figure.dpi
-        self.canvas.setFixedSize(int(width * dpi), int(height * dpi))
-
-        scroll.setWidget(container)
-        layout.addWidget(scroll)
-
-    def refresh(self):
-        # Obtener tareas para Gantt
-        tasks, y_labels = self._gather_gantt_data()
-        self._plot_gantt(tasks, y_labels)
-
-    def _gather_gantt_data(self):
-        """Recoge hitos y avances agrupados sin repetir items."""
-        tasks = []
-        y_labels = []
-        y = 0
-
-        # Hitos (cronograma)
-        cronos = self.db.fetchall("SELECT hito, date FROM cronograma")
-        for hito, fecha in cronos:
-            try:
-                d = datetime.strptime(fecha, "%Y-%m-%d")
-            except ValueError:
-                continue
-            tasks.append((d, d, y, hito))
-            y_labels.append(hito)
-            y += 1
-
-        # Avances agrupados por item: un rango único
-        rows = self.db.fetchall(
-            """
-            SELECT i.name,
-                   MIN(a.start_date), MAX(a.end_date)
-              FROM avances a
-              JOIN items i ON a.item_id = i.id
-             WHERE i.active = 1
-             GROUP BY i.name
-            """
+    def load_data(self):
+        """
+        Carga ítems y fechas desde tabla 'avances'.
+        """
+        sql = (
+            "SELECT i.id, i.name, "
+            "MIN(a.date) AS start_date, MAX(a.date) AS end_date "
+            "FROM items i "
+            "JOIN avances a ON a.item_id = i.id "
+            "GROUP BY i.id, i.name "
+            "ORDER BY i.id;"
         )
-        for name, start_str, end_str in rows:
-            if name in y_labels:
-                continue  # evitar duplicados
-            try:
-                start = datetime.strptime(start_str, "%Y-%m-%d")
-                end = datetime.strptime(end_str, "%Y-%m-%d")
-            except (TypeError, ValueError):
+        rows = self.db.fetchall(sql)
+        self.tasks = []
+        for item_id, name, start_val, end_val in rows:
+            # Ignorar registros sin fechas
+            if start_val is None or end_val is None:
                 continue
-            tasks.append((start, end, y, name))
-            y_labels.append(name)
-            y += 1
+            # Convertir tipos
+            if isinstance(start_val, str):
+                start = datetime.datetime.strptime(start_val, "%Y-%m-%d").date()
+            else:
+                start = start_val
+            if isinstance(end_val, str):
+                end = datetime.datetime.strptime(end_val, "%Y-%m-%d").date()
+            else:
+                end = end_val
+            days = (end - start).days
+            hours = days * 8  # Estimación: 8h por día
+            self.tasks.append({
+                "id": item_id,
+                "activity": name,
+                "hours": hours,
+                "start": start,
+                "end": end,
+                "c": 0,
+                "p": 0,
+                "days": days
+            })
+        # Rellena la tabla
+        self.table.setRowCount(len(self.tasks))
+        for i, t in enumerate(self.tasks):
+            self.table.setItem(i, 0, QTableWidgetItem(str(t["id"])))
+            self.table.setItem(i, 1, QTableWidgetItem(t["activity"]))
+            self.table.setItem(i, 2, QTableWidgetItem(str(t["hours"])))
+            self.table.setItem(i, 3, QTableWidgetItem(t["start"].strftime("%d/%m/%y")))
+            self.table.setItem(i, 4, QTableWidgetItem(t["end"].strftime("%d/%m/%y")))
+            self.table.setItem(i, 5, QTableWidgetItem(str(t["c"])))
+            self.table.setItem(i, 6, QTableWidgetItem(str(t["p"])))
+            self.table.setItem(i, 7, QTableWidgetItem(str(t["days"])))
+        # Pinta el Gantt
+        self.draw_gantt()
 
-        return tasks, y_labels
+    def draw_gantt(self):
+        self.figure.clear()
+        ax = self.figure.add_subplot(111)
+        if not self.tasks:
+            self.canvas.draw()
+            return
 
-    def _plot_gantt(self, tasks, y_labels):
-        self.ax.clear()
+        # Configurar límites de fecha
+        starts = [t["start"] for t in self.tasks]
+        ends = [t["end"] for t in self.tasks]
+        min_date = min(starts) - datetime.timedelta(days=1)
+        max_date = max(ends) + datetime.timedelta(days=1)
+        ax.set_xlim(mdates.date2num(min_date), mdates.date2num(max_date))
 
-        # Ajustar límites con margen
-        dates = [t[0] for t in tasks] + [t[1] for t in tasks]
-        if dates:
-            mn, mx = min(dates), max(dates)
-            span = mx - mn
-            self.ax.set_xlim(mn - span * 0.05, mx + span * 0.05)
+        # Formato eje X: meses y semanas
+        ax.xaxis.set_major_locator(mdates.MonthLocator())
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%b/%Y'))
+        ax.xaxis.set_minor_locator(mdates.WeekdayLocator(byweekday=mdates.MO))
+        ax.grid(True, which='minor', axis='x', linestyle='--', color='red')
+        ax.grid(True, which='major', axis='x', linestyle='-', color='black', linewidth=1)
 
         # Dibujar barras y etiquetas
-        for start, end, y_pos, label in tasks:
-            duration = (end - start).days or 1
-            self.ax.broken_barh(
-                [(mdates.date2num(start), duration)],
-                (y_pos - 0.4, 0.8),
-                facecolors='tab:blue', edgecolors='black', lw=0.8
-            )
-            self.ax.text(
-                mdates.date2num(start) + 0.1, y_pos,
-                label, va='center', ha='left', fontsize=9, color='#222'
-            )
+        yticks, ylabels = [], []
+        for idx, t in enumerate(self.tasks):
+            start_num = mdates.date2num(t["start"])
+            duration = t["days"]
+            ax.broken_barh([(start_num, duration)], (idx*10, 9), facecolors='tab:red')
+            yticks.append(idx*10 + 4.5)
+            ylabels.append(f"{t['id']}. {t['activity']}")
+            ax.text(start_num + duration/2, idx*10 + 4.5,
+                    f"{duration} d.", ha='center', va='center', fontsize=8)
 
-        # Etiquetas Y
-        self.ax.set_yticks(range(len(y_labels)))
-        self.ax.set_yticklabels(y_labels, fontsize=10)
+        ax.set_yticks(yticks)
+        ax.set_yticklabels(ylabels)
+        ax.set_ylabel('Actividades')
+        ax.set_xlabel('Fecha')
 
-        # Eje X: meses arriba, días abajo
-        self.ax.xaxis.set_major_locator(mdates.MonthLocator())
-        self.ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))
-        self.ax.xaxis.set_minor_locator(mdates.DayLocator())
-        self.ax.xaxis.set_minor_formatter(mdates.DateFormatter('%d'))
-        self.ax.xaxis.tick_top()
-        self.ax.xaxis.set_label_position('top')
-        self.ax.tick_params(axis='x', which='major', length=10, pad=20, labelsize=11)
-        self.ax.tick_params(axis='x', which='minor', length=5, pad=5, labelsize=8, rotation=90)
+        # Línea de hoy
+        hoy = datetime.date.today()
+        ax.axvline(mdates.date2num(hoy), color='blue', linestyle='--')
 
-        # Grid estilo oficial
-        self.ax.grid(which='major', axis='x', linestyle='-', color='gray', linewidth=1)
-        self.ax.grid(which='minor', axis='x', linestyle=':', color='gray', linewidth=0.5)
-        self.ax.grid(which='major', axis='y', linestyle='--', color='lightgray', linewidth=0.5)
-
-        self.ax.invert_yaxis()
-        self.figure.tight_layout(rect=[0, 0, 1, 0.95])
-        self.ax.set_title('CRONOGRAMA TENTATIVO DE ACTIVIDADES', fontsize=16, pad=20)
+        self.figure.autofmt_xdate(rotation=30)
         self.canvas.draw()
+
+    def refresh(self):
+        """Recargar datos y redibujar el cronograma."""
+        self.load_data()

@@ -5,3 +5,4 @@ python-docx>=0.8
 qdarkstyle>=3.0
 pyqtgraph>=0.13
 matplotlib
+PyQt6-WebEngine
